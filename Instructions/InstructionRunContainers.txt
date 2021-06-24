@@ -1,0 +1,22 @@
+#Логин в Docker artifactory
+docker login artifactory.domain.ru:port
+#Запуск sql-agent
+docker run --restart=always --name sqlagent -p 5000:5000 artifactory.domain.ru:port/dbhi/sql-agent
+#Запуск prometheus-sql
+docker run --restart=always --name prometheus-sql -d -p 8080:8080 -v ${PWD}/queries.yml:/queries.yml --link sqlagent:sqlagent artifactory.domain.ru:port/dbhi/prometheus-sql
+#Запуск blackbox
+docker run -d -p 9115:9115 --name blackbox_exporter -v ${PWD}:/etc/prometheus/config artifactory.domain.ru:port/prom/blackbox-exporter --config.file=/etc/prometheus/config/blackbox.yml
+#Скачка образа prometheus
+docker pull artifactory.domain.ru:port/prom/prometheus
+#Запуск контейнера prometheus
+docker run --restart=always --name prometheus -d -p 9090:9090 -v ${PWD}/prometheus.yml:/etc/prometheus/prometheus.yml artifactory.domain.ru:port/prom/prometheus
+Берет локальное время машины на которой запущен контейнер
+docker run --restart=always --name prometheus -d -p 9090:9090 -v /etc/localtime:/etc/localtime:ro -v ${PWD}/prometheus.yml:/etc/prometheus/prometheus.yml artifactory.domain.ru:port/prom/prometheus
+#Запуск ORACLE
+docker run --restart=always --name oracledb_exporter_push -d -p 9161:9161 -e DATA_SOURCE_NAME=LOGIN/PASSWORD@dbpush.domain.ru/PUSH.domain.ru artifactory.domain.ru:port/iamseth/oracledb_exporter
+docker run --restart=always --name oracledb_exporter_smsgt -d -p 9164:9161 -e DATA_SOURCE_NAME=LOGIN/PASSWORD@dbsmsgt.domain.ru/smsgt.domain.ru artifactory.domain.ru:port/iamseth/oracledb_exporter
+#Запуск script exporter
+docker run --restart=always --name ScriptExporter -d -p 9661:9661 artifactory.domain.ru:port/ncabatoff/script-exporter
+запуск на HOSTNAME /home/smsgate/utils/script-exporter -script.path /home/smsgate/utils/ -web.listen-address :9661&
+#Запуск prometheus-es-exporter для забора метрик из эластика
+sudo docker run --restart=always --name prometheus-es-exporter -v /etc/prometheus/Elastic/exporter.cfg:/usr/src/app/exporter.cfg -d -p 9206:9206 artifactory.domain.ru:port/braedon/prometheus-es-exporter:0.5.1 --basic-user username --basic-password password -e https://elastic-prod.domain.ru -e https://elastic-prod.domain.ru --cluster-health-disable --nodes-stats-disable --indices-stats-disable
